@@ -2,7 +2,7 @@
 session_start();
 
 // Temporary user data (replace with database later)
-$username = "Lonjezo Makhaula";
+$username = "LORGODAN MAKHAULA";
 ?>
 
 <!DOCTYPE html>

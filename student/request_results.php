@@ -2,7 +2,7 @@
 session_start();
 
 // Temporary student name
-$studentName = "Lonjezo Makhaula";
+$studentName = "LORGODAN MAKHAULA";
 ?>
 
 <!DOCTYPE html>
