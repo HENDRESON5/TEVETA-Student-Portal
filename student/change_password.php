@@ -1,12 +1,14 @@
 <?php
 session_start();
 
-// Temporary student data
+// Temporary user
 $studentName = "Lonjezo Makhaula";
-$username = "lonjezo";
-$college = "Salima Technical College";
-$course = "ICT";
-$level = "Level 2";
+
+$message = "";
+
+if(isset($_POST['change_password'])){
+    $message = "Password updated successfully! (Database connection coming later)";
+}
 ?>
 
 <!DOCTYPE html>
@@ -16,7 +18,7 @@ $level = "Level 2";
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>My Profile</title>
+<title>Change Password</title>
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
@@ -46,8 +48,8 @@ box-shadow:2px 0 10px rgba(0,0,0,.08);
 }
 
 .logo{
-padding:25px;
 text-align:center;
+padding:25px;
 border-bottom:1px solid #eee;
 }
 
@@ -75,7 +77,7 @@ transition:.3s;
 .menu a:hover,
 .menu a.active{
 background:#F15A22;
-color:white;
+color:#fff;
 }
 
 .menu i{
@@ -88,6 +90,8 @@ width:25px;
 margin-left:250px;
 width:calc(100% - 250px);
 }
+
+/* Header */
 
 .header{
 height:70px;
@@ -113,98 +117,86 @@ font-weight:600;
 padding:30px;
 }
 
-.profile-card{
+/* Card */
+
+.card{
 background:#fff;
 padding:35px;
 border-radius:10px;
 box-shadow:0 5px 15px rgba(0,0,0,.05);
+max-width:650px;
 }
 
-.profile-top{
-text-align:center;
-margin-bottom:30px;
+.card h2{
+color:#F15A22;
+margin-bottom:25px;
 }
 
-.avatar{
-width:120px;
-height:120px;
-border-radius:50%;
-background:#F15A22;
-color:white;
-display:flex;
-justify-content:center;
-align-items:center;
-font-size:50px;
-margin:auto;
-margin-bottom:15px;
+.form-group{
+margin-bottom:20px;
 }
 
-.profile-top h2{
-color:#333;
-margin-bottom:5px;
-}
-
-.profile-top p{
-color:#777;
-}
-
-.info{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:20px;
-margin-top:20px;
-}
-
-.box{
-background:#fafafa;
-padding:18px;
-border-radius:8px;
-border-left:4px solid #F15A22;
-}
-
-.box label{
-font-weight:bold;
-color:#666;
+label{
 display:block;
 margin-bottom:8px;
+font-weight:600;
+color:#444;
 }
 
-.box p{
-font-size:17px;
-color:#333;
+input{
+width:100%;
+padding:13px;
+border:1px solid #ccc;
+border-radius:8px;
+font-size:15px;
+outline:none;
 }
 
-.buttons{
-margin-top:30px;
-display:flex;
-gap:15px;
+input:focus{
+border-color:#F15A22;
 }
 
-.btn{
-padding:12px 25px;
+button{
+width:100%;
+padding:14px;
+background:#F15A22;
 border:none;
+color:white;
+font-size:16px;
 border-radius:8px;
 cursor:pointer;
-font-size:15px;
-text-decoration:none;
+transition:.3s;
 }
 
-.edit{
-background:#F15A22;
-color:white;
-}
-
-.edit:hover{
+button:hover{
 background:#d94d18;
 }
 
-.back{
-background:#555;
-color:white;
+.message{
+background:#d4edda;
+color:#155724;
+padding:15px;
+border-radius:8px;
+margin-bottom:20px;
 }
 
-.back:hover{
-background:#333;
+.tips{
+margin-top:30px;
+background:#fff8f4;
+border-left:5px solid #F15A22;
+padding:20px;
+border-radius:8px;
+max-width:650px;
+}
+
+.tips h3{
+color:#F15A22;
+margin-bottom:15px;
+}
+
+.tips ul{
+padding-left:20px;
+color:#555;
 }
 
 footer{
@@ -248,12 +240,12 @@ Request Results
 My Requests
 </a>
 
-<a href="#" class="active">
+<a href="profile.php">
 <i class="fa fa-user"></i>
 My Profile
 </a>
 
-<a href="change_password.php">
+<a href="#" class="active">
 <i class="fa fa-lock"></i>
 Change Password
 </a>
@@ -273,7 +265,7 @@ Logout
 
 <div class="header">
 
-<h2>My Profile</h2>
+<h2>Change Password</h2>
 
 <div class="user">
 
@@ -287,71 +279,85 @@ Logout
 
 <div class="content">
 
-<div class="profile-card">
+<div class="card">
 
-<div class="profile-top">
+<h2>Update Your Password</h2>
 
-<div class="avatar">
+<?php
+if($message!=""){
+echo "<div class='message'>$message</div>";
+}
+?>
 
-<i class="fa fa-user"></i>
+<form method="POST">
 
-</div>
+<div class="form-group">
 
-<h2><?php echo $studentName; ?></h2>
+<label>Current Password</label>
 
-<p>TEVETA Student</p>
-
-</div>
-
-<div class="info">
-
-<div class="box">
-<label>Full Name</label>
-<p><?php echo $studentName; ?></p>
-</div>
-
-<div class="box">
-<label>Username</label>
-<p><?php echo $username; ?></p>
-</div>
-
-<div class="box">
-<label>College</label>
-<p><?php echo $college; ?></p>
-</div>
-
-<div class="box">
-<label>Course</label>
-<p><?php echo $course; ?></p>
-</div>
-
-<div class="box">
-<label>Level</label>
-<p><?php echo $level; ?></p>
-</div>
-
-<div class="box">
-<label>Account Status</label>
-<p style="color:green;font-weight:bold;">
-Active
-</p>
-</div>
+<input
+type="password"
+name="current_password"
+placeholder="Enter current password"
+required>
 
 </div>
 
-<div class="buttons">
+<div class="form-group">
 
-<a href="#" class="btn edit">
-<i class="fa fa-pen"></i>
-Edit Profile
-</a>
+<label>New Password</label>
 
-<a href="dashboard.php" class="btn back">
-<i class="fa fa-arrow-left"></i>
-Back to Dashboard
-</a>
+<input
+type="password"
+name="new_password"
+placeholder="Enter new password"
+required>
 
 </div>
+
+<div class="form-group">
+
+<label>Confirm New Password</label>
+
+<input
+type="password"
+name="confirm_password"
+placeholder="Confirm new password"
+required>
+
+</div>
+
+<button
+type="submit"
+name="change_password">
+
+<i class="fa fa-key"></i>
+
+Update Password
+
+</button>
+
+</form>
+
+</div>
+
+<div class="tips">
+
+<h3>Password Tips</h3>
+
+<ul>
+
+<li>Use at least 8 characters.</li>
+
+<li>Include uppercase and lowercase letters.</li>
+
+<li>Include at least one number.</li>
+
+<li>Use a special character (e.g. @, #, $, %).</li>
+
+<li>Do not share your password with anyone.</li>
+
+</ul>
 
 </div>
 
