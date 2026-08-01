@@ -6,53 +6,49 @@ $studentName = "Lonjezo Makhaula";
 
 /* ============================================================
    TODO (BACKEND - your friend):
-   Replace the $resultsData array below with a real database query.
+   Replace $resultsData and $overall below with a real database query.
 
-   Suggested structure once pulled from DB, grouped by paper type:
+   Suggested structure once pulled from DB:
 
      $resultsData = [
-       "practical" => [
-         [
-           "subject"       => "...",          // from results/modules table
-           "score"         => 82,             // numeric score, or null if not graded yet
-           "classification"=> "Distinction",  // "Pass" | "Credit" | "Distinction" | "Fail"
-           "comment"       => "..."           // admin_comment column, may be empty
-         ],
-         ...
-       ],
-       "occupational" => [ ... same shape ... ],
-       "fundamental"  => [ ... same shape ... ],
+       "practical"    => ["score" => 82, "classification" => "Distinction"],
+       "occupational" => ["score" => 65, "classification" => "Pass"],
+       "fundamental"  => ["score" => 70, "classification" => "Credit"],
+     ];
+
+     $overall = [
+       "classification" => "Credit",     // overall result across all 3 papers
+       "comment"         => "..."         // admin_comment column, may be empty
      ];
 
    Likely query shape (adjust to your actual schema):
 
-     SELECT subject_name, paper_type, score, classification, admin_comment
+     SELECT paper_type, score, classification
      FROM results
-     WHERE student_id = ?
-     ORDER BY paper_type, subject_name;
+     WHERE student_id = ?;
 
-   Then bucket the rows into practical / occupational / fundamental
-   in PHP before they reach the HTML below.
+     SELECT overall_classification, admin_comment
+     FROM student_overall_result
+     WHERE student_id = ?;
+
+   If a paper type hasn't been graded yet, set its "score" to null and
+   "classification" to "Pending" - the HTML below already handles that.
    ============================================================ */
 
 $resultsData = [
-  "practical" => [
-    ["subject" => "Web Application Development",  "score" => 78, "classification" => "Credit",      "comment" => "Good use of validation logic."],
-    ["subject" => "Networking Practical",         "score" => 88, "classification" => "Distinction", "comment" => "Excellent subnetting and cabling work."],
-  ],
-  "occupational" => [
-    ["subject" => "Systems Analysis & Design",    "score" => 65, "classification" => "Pass",        "comment" => "Meets requirements; improve documentation."],
-    ["subject" => "Database Management",          "score" => 74, "classification" => "Credit",      "comment" => "Solid normalization, minor query errors."],
-  ],
-  "fundamental" => [
-    ["subject" => "Communication Skills",         "score" => 70, "classification" => "Credit",      "comment" => ""],
-    ["subject" => "Mathematics for ICT",          "score" => 55, "classification" => "Pass",        "comment" => "Passed, but revise algebra fundamentals."],
-  ],
+  "practical"    => ["score" => 88, "classification" => "Distinction"],
+  "occupational" => ["score" => 65, "classification" => "Pass"],
+  "fundamental"  => ["score" => 70, "classification" => "Credit"],
 ];
 
-/* TODO (BACKEND): if a student has no results yet for a category,
-   $resultsData["practical"] (etc.) should just be an empty array —
-   the HTML below already handles that and shows an empty-state row. */
+$overall = [
+  "classification" => "Credit",
+  "comment"         => "Good overall performance. Improve fundamental paper score next attempt.",
+];
+
+/* TODO (BACKEND): if results aren't published yet at all, you may want
+   to skip straight to an "empty state" instead of showing this table -
+   e.g. check if $resultsData is null/empty before rendering. */
 
 // Helper: maps a classification string to a CSS badge class.
 // Keep this in sync with whatever classification strings the DB uses.
@@ -62,7 +58,7 @@ function classBadge($classification) {
     case "credit":       return "badge-credit";
     case "pass":         return "badge-pass";
     case "fail":         return "badge-fail";
-    default:             return "badge-pending";
+    default:             return "badge-pending"; // e.g. "Pending"
   }
 }
 ?>
@@ -282,26 +278,19 @@ body{
   color: var(--orange);
   margin-bottom:18px;
   font-size:19px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-.paper-section h2 i{
-  font-size:18px;
 }
 
 table{
   width:100%;
   border-collapse:collapse;
-  min-width:560px;
+  min-width:480px;
 }
 
 th, td{
-  padding:14px 15px;
+  padding:16px 15px;
   text-align:left;
   border-bottom:1px solid #eee;
-  font-size:14px;
+  font-size:14.5px;
 }
 
 th{
@@ -314,11 +303,32 @@ tbody tr:hover td{
   background:#fafafa;
 }
 
+.paper-name{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  font-weight:600;
+  color:#333;
+}
+
+.paper-name i{
+  color: var(--orange);
+  font-size:18px;
+  width:20px;
+  text-align:center;
+}
+
+.score-value{
+  font-size:17px;
+  font-weight:700;
+  color:#333;
+}
+
 .badge{
   display:inline-block;
-  padding:5px 12px;
+  padding:6px 14px;
   border-radius:20px;
-  font-size:12.5px;
+  font-size:13px;
   font-weight:700;
   color:#fff;
   white-space:nowrap;
@@ -330,19 +340,64 @@ tbody tr:hover td{
 .badge-fail        { background: var(--fail); }
 .badge-pending     { background: var(--pending); }
 
-.comment-cell{
-  color:#555;
-  max-width:260px;
-}
-.comment-cell.empty{
-  color: var(--text-muted);
-  font-style:italic;
+/* Overall summary */
+.overall-card{
+  background:#fff;
+  border-left:6px solid var(--orange);
+  padding:30px;
+  border-radius:10px;
+  box-shadow:0 5px 15px rgba(0,0,0,.05);
+  margin-bottom:25px;
 }
 
-.empty-state{
-  text-align:center;
+.overall-card h2{
+  color: var(--orange);
+  font-size:19px;
+  margin-bottom:20px;
+}
+
+.overall-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:16px;
+  margin-bottom:18px;
+}
+
+.overall-label{
+  font-size:15px;
+  color:#555;
+  font-weight:600;
+}
+
+.overall-badge .badge{
+  font-size:16px;
+  padding:9px 20px;
+}
+
+.admin-comment{
+  background:#fff8f4;
+  border-radius:8px;
+  padding:16px 18px;
+}
+
+.admin-comment h3{
+  font-size:13px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  color: var(--orange);
+  margin-bottom:8px;
+}
+
+.admin-comment p{
+  color:#555;
+  line-height:1.6;
+  font-size:14.5px;
+}
+
+.admin-comment p.empty{
   color: var(--text-muted);
-  padding:20px 0 !important;
   font-style:italic;
 }
 
@@ -388,6 +443,11 @@ footer{
   .header h1{
     font-size:16px;
   }
+
+  .overall-top{
+    flex-direction:column;
+    align-items:flex-start;
+  }
 }
 
 @media (max-width: 480px){
@@ -397,7 +457,8 @@ footer{
   .header{
     padding:0 16px;
   }
-  .paper-section{
+  .paper-section,
+  .overall-card{
     padding:18px;
   }
   .user span.user-name{
@@ -421,7 +482,7 @@ footer{
 <nav class="sidebar" id="sidebar" aria-label="Main navigation">
 
   <div class="logo">
-    <img src="../images/teveta-logo.png" alt="TEVETA logo">
+    <img src="../images/logo.png" alt="TEVETA logo">
     <h2>Student Portal</h2>
   </div>
 
@@ -464,106 +525,98 @@ footer{
       <span class="legend-item"><span class="legend-dot" style="background:var(--fail)"></span> Fail</span>
     </div>
 
-    <!-- PRACTICAL PAPER -->
+    <!-- RESULTS BY PAPER -->
     <div class="paper-section">
-      <h2><i class="fa fa-screwdriver-wrench"></i> Practical Paper</h2>
+      <h2>Results by Paper</h2>
       <table>
         <thead>
           <tr>
-            <th>Subject</th>
+            <th>Paper</th>
             <th>Score</th>
             <th>Classification</th>
-            <th>Administration Comment</th>
           </tr>
         </thead>
         <tbody>
-          <?php if (empty($resultsData["practical"])): ?>
-            <tr><td colspan="4" class="empty-state">No practical paper results published yet.</td></tr>
-          <?php else: ?>
-            <?php foreach ($resultsData["practical"] as $row): ?>
-              <tr>
-                <td><?php echo htmlspecialchars($row["subject"]); ?></td>
-                <td><?php echo $row["score"] !== null ? htmlspecialchars($row["score"]) : "—"; ?></td>
-                <td><span class="badge <?php echo classBadge($row["classification"]); ?>"><?php echo htmlspecialchars($row["classification"]); ?></span></td>
-                <td class="comment-cell<?php echo empty($row["comment"]) ? " empty" : ""; ?>">
-                  <?php echo $row["comment"] !== "" ? htmlspecialchars($row["comment"]) : "No comment from administration."; ?>
-                </td>
-              </tr>
-            <?php endforeach; ?>
-          <?php endif; ?>
+
+          <tr>
+            <td>
+              <span class="paper-name"><i class="fa fa-screwdriver-wrench"></i> Practical Paper</span>
+            </td>
+            <td>
+              <span class="score-value">
+                <?php echo $resultsData["practical"]["score"] !== null ? htmlspecialchars($resultsData["practical"]["score"]) : "—"; ?>
+              </span>
+            </td>
+            <td>
+              <span class="badge <?php echo classBadge($resultsData["practical"]["classification"]); ?>">
+                <?php echo htmlspecialchars($resultsData["practical"]["classification"]); ?>
+              </span>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="paper-name"><i class="fa fa-briefcase"></i> Occupational Paper</span>
+            </td>
+            <td>
+              <span class="score-value">
+                <?php echo $resultsData["occupational"]["score"] !== null ? htmlspecialchars($resultsData["occupational"]["score"]) : "—"; ?>
+              </span>
+            </td>
+            <td>
+              <span class="badge <?php echo classBadge($resultsData["occupational"]["classification"]); ?>">
+                <?php echo htmlspecialchars($resultsData["occupational"]["classification"]); ?>
+              </span>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="paper-name"><i class="fa fa-book"></i> Fundamental Paper</span>
+            </td>
+            <td>
+              <span class="score-value">
+                <?php echo $resultsData["fundamental"]["score"] !== null ? htmlspecialchars($resultsData["fundamental"]["score"]) : "—"; ?>
+              </span>
+            </td>
+            <td>
+              <span class="badge <?php echo classBadge($resultsData["fundamental"]["classification"]); ?>">
+                <?php echo htmlspecialchars($resultsData["fundamental"]["classification"]); ?>
+              </span>
+            </td>
+          </tr>
+
         </tbody>
       </table>
     </div>
 
-    <!-- OCCUPATIONAL PAPER -->
-    <div class="paper-section">
-      <h2><i class="fa fa-briefcase"></i> Occupational Paper</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Subject</th>
-            <th>Score</th>
-            <th>Classification</th>
-            <th>Administration Comment</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php if (empty($resultsData["occupational"])): ?>
-            <tr><td colspan="4" class="empty-state">No occupational paper results published yet.</td></tr>
-          <?php else: ?>
-            <?php foreach ($resultsData["occupational"] as $row): ?>
-              <tr>
-                <td><?php echo htmlspecialchars($row["subject"]); ?></td>
-                <td><?php echo $row["score"] !== null ? htmlspecialchars($row["score"]) : "—"; ?></td>
-                <td><span class="badge <?php echo classBadge($row["classification"]); ?>"><?php echo htmlspecialchars($row["classification"]); ?></span></td>
-                <td class="comment-cell<?php echo empty($row["comment"]) ? " empty" : ""; ?>">
-                  <?php echo $row["comment"] !== "" ? htmlspecialchars($row["comment"]) : "No comment from administration."; ?>
-                </td>
-              </tr>
-            <?php endforeach; ?>
-          <?php endif; ?>
-        </tbody>
-      </table>
+    <!-- OVERALL SUMMARY -->
+    <div class="overall-card">
+      <h2>Overall Result</h2>
+
+      <div class="overall-top">
+        <span class="overall-label">Final classification across all papers:</span>
+        <span class="overall-badge">
+          <span class="badge <?php echo classBadge($overall["classification"]); ?>">
+            <?php echo htmlspecialchars($overall["classification"]); ?>
+          </span>
+        </span>
+      </div>
+
+      <div class="admin-comment">
+        <h3>Administration Comment</h3>
+        <p class="<?php echo empty($overall["comment"]) ? "empty" : ""; ?>">
+          <?php echo $overall["comment"] !== "" ? htmlspecialchars($overall["comment"]) : "No comment from administration."; ?>
+        </p>
+      </div>
     </div>
 
-    <!-- FUNDAMENTAL PAPER -->
-    <div class="paper-section">
-      <h2><i class="fa fa-book"></i> Fundamental Paper</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Subject</th>
-            <th>Score</th>
-            <th>Classification</th>
-            <th>Administration Comment</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php if (empty($resultsData["fundamental"])): ?>
-            <tr><td colspan="4" class="empty-state">No fundamental paper results published yet.</td></tr>
-          <?php else: ?>
-            <?php foreach ($resultsData["fundamental"] as $row): ?>
-              <tr>
-                <td><?php echo htmlspecialchars($row["subject"]); ?></td>
-                <td><?php echo $row["score"] !== null ? htmlspecialchars($row["score"]) : "—"; ?></td>
-                <td><span class="badge <?php echo classBadge($row["classification"]); ?>"><?php echo htmlspecialchars($row["classification"]); ?></span></td>
-                <td class="comment-cell<?php echo empty($row["comment"]) ? " empty" : ""; ?>">
-                  <?php echo $row["comment"] !== "" ? htmlspecialchars($row["comment"]) : "No comment from administration."; ?>
-                </td>
-              </tr>
-            <?php endforeach; ?>
-          <?php endif; ?>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- TODO (BACKEND): consider adding an "Overall Status" summary card here
-         (e.g. total credits earned, overall pass/fail, download-certificate
-         button once all three paper types are graded and passed). -->
+    <!-- TODO (BACKEND): consider adding a "Download Results Slip" button
+         here once the overall result is final (e.g. generates a PDF). -->
 
     <footer>
       &copy; 2026 TEVETA Student Portal<br>
-      
+     
     </footer>
 
   </main>
