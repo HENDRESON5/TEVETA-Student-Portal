@@ -5,66 +5,8 @@ session_start();
 $studentName = "Lonjezo Makhaula";
 
 /* ============================================================
-   TODO (BACKEND - your friend):
-   Replace the $resultsData array below with a real database query.
-
-   Suggested structure once pulled from DB, grouped by paper type:
-
-     $resultsData = [
-       "practical" => [
-         [
-           "subject"       => "...",          // from results/modules table
-           "score"         => 82,             // numeric score, or null if not graded yet
-           "classification"=> "Distinction",  // "Pass" | "Credit" | "Distinction" | "Fail"
-           "comment"       => "..."           // admin_comment column, may be empty
-         ],
-         ...
-       ],
-       "occupational" => [ ... same shape ... ],
-       "fundamental"  => [ ... same shape ... ],
-     ];
-
-   Likely query shape (adjust to your actual schema):
-
-     SELECT subject_name, paper_type, score, classification, admin_comment
-     FROM results
-     WHERE student_id = ?
-     ORDER BY paper_type, subject_name;
-
-   Then bucket the rows into practical / occupational / fundamental
-   in PHP before they reach the HTML below.
-   ============================================================ */
-
-$resultsData = [
-  "practical" => [
-    ["subject" => "Web Application Development",  "score" => 78, "classification" => "Credit",      "comment" => "Good use of validation logic."],
-    ["subject" => "Networking Practical",         "score" => 88, "classification" => "Distinction", "comment" => "Excellent subnetting and cabling work."],
-  ],
-  "occupational" => [
-    ["subject" => "Systems Analysis & Design",    "score" => 65, "classification" => "Pass",        "comment" => "Meets requirements; improve documentation."],
-    ["subject" => "Database Management",          "score" => 74, "classification" => "Credit",      "comment" => "Solid normalization, minor query errors."],
-  ],
-  "fundamental" => [
-    ["subject" => "Communication Skills",         "score" => 70, "classification" => "Credit",      "comment" => ""],
-    ["subject" => "Mathematics for ICT",          "score" => 55, "classification" => "Pass",        "comment" => "Passed, but revise algebra fundamentals."],
-  ],
-];
-
-/* TODO (BACKEND): if a student has no results yet for a category,
-   $resultsData["practical"] (etc.) should just be an empty array —
-   the HTML below already handles that and shows an empty-state row. */
-
-// Helper: maps a classification string to a CSS badge class.
-// Keep this in sync with whatever classification strings the DB uses.
-function classBadge($classification) {
-  switch (strtolower($classification)) {
-    case "distinction": return "badge-distinction";
-    case "credit":       return "badge-credit";
-    case "pass":         return "badge-pass";
-    case "fail":         return "badge-fail";
-    default:             return "badge-pending";
-  }
-}
+    (BACKEND):
+*/
 ?>
 
 <!DOCTYPE html>
