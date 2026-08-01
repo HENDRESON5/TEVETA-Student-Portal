@@ -5,6 +5,7 @@ session_start();
 $studentName = "Lonjezo Makhaula";
 
 /* ============================================================
+<<<<<<< HEAD
    TODO (BACKEND - your friend):
    Replace $resultsData and $overall below with a real database query.
 
@@ -61,6 +62,10 @@ function classBadge($classification) {
     default:             return "badge-pending"; // e.g. "Pending"
   }
 }
+=======
+    (BACKEND):
+*/
+>>>>>>> e284b9fa5d792fde6ee2dc05bfec75d30f78ccf2
 ?>
 
 <!DOCTYPE html>
