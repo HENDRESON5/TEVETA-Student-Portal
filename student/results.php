@@ -62,10 +62,10 @@ function classBadge($classification) {
     default:             return "badge-pending"; // e.g. "Pending"
   }
 }
-=======
-    (BACKEND):
-*/
->>>>>>> e284b9fa5d792fde6ee2dc05bfec75d30f78ccf2
+       // =======
+    // (BACKEND):
+ 
+ // >>>>>>> e284b9fa5d792fde6ee2dc05bfec75d30f78ccf2
 ?>
 
 <!DOCTYPE html>
@@ -487,7 +487,7 @@ footer{
 <nav class="sidebar" id="sidebar" aria-label="Main navigation">
 
   <div class="logo">
-    <img src="../images/logo.png" alt="TEVETA logo">
+    <img src="../images/Teveta-logo.png" alt="TEVETA logo">
     <h2>Student Portal</h2>
   </div>
 
