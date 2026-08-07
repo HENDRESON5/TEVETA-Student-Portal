@@ -1,19 +1,9 @@
 <?php
-session_start();
+require_once '../config/auth.php';
+require_login();
+require_role('Admin');
 
-// Temporary admin data
-$adminName = "System Administrator";
-
-/* TODO (BACKEND): replace with a real query, most recent first
-   SELECT r.id, s.id AS student_id, s.name AS student, s.college, s.course, s.level, r.exam_year, r.status
-   FROM result_requests r JOIN students s ON r.student_id = s.id
-   ORDER BY r.created_at DESC; */
-$requests = [
-  ["id" => 1, "student" => "Lonjezo Makhaula", "college" => "Salima Technical College",   "course" => "ICT",                     "level" => "Level 2", "year" => 2026, "status" => "pending"],
-  ["id" => 2, "student" => "John Banda",       "college" => "Mzuzu Technical College",    "course" => "Electrical Installation",  "level" => "Level 3", "year" => 2026, "status" => "approved"],
-  ["id" => 3, "student" => "Mary Phiri",       "college" => "Lilongwe Technical College", "course" => "Plumbing",                 "level" => "Level 1", "year" => 2025, "status" => "rejected"],
-  ["id" => 4, "student" => "Peter Mbewe",      "college" => "Zomba Technical College",    "course" => "Tailoring",                "level" => "Level 2", "year" => 2026, "status" => "pending"],
-];
+$adminName = $_SESSION['fullname'];
 
 function statusClass($status) {
   switch (strtolower($status)) {
@@ -23,40 +13,119 @@ function statusClass($status) {
   }
 }
 
-// ------------------------------------------------------------
-// Are we viewing the list, or editing one specific request?
-// ?action=edit&request_id=3 switches into edit mode.
-// ------------------------------------------------------------
 $isEditMode = isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['request_id']);
 $currentRequest = null;
 
 if ($isEditMode) {
-  $requestId = (int)$_GET['request_id'];
-  foreach ($requests as $req) {
-    if ($req['id'] === $requestId) {
-      $currentRequest = $req;
-      break;
-    }
-  }
+    $requestId = (int)$_GET['request_id'];
+    $stmt = mysqli_prepare($conn, "
+        SELECT r.request_id, s.student_id, u.fullname AS student, col.college_name, co.course_name, sem.semester_name, r.status
+        FROM result_requests r
+        JOIN students s ON r.student_id = s.student_id
+        JOIN users u ON s.user_id = u.id
+        JOIN colleges col ON s.college_id = col.college_id
+        JOIN courses co ON s.course_id = co.course_id
+        JOIN semesters sem ON s.semester_id = sem.semester_id
+        WHERE r.request_id = ?
+    ");
+    mysqli_stmt_bind_param($stmt, "i", $requestId);
+    mysqli_stmt_execute($stmt);
+    $currentRequest = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
 }
 
 $message = "";
 $messageType = "";
 
-if ($isEditMode && isset($_POST['save_results'])) {
-  /* TODO (BACKEND):
-     - Validate practical/occupational/fundamental scores + classifications
-       and the overall grade use the allowed values ("Pass"|"Credit"|"Distinction"|"Fail")
-     - Save everything to the results table for this request's student
-     - Update this request's status (e.g. to "approved") once results are entered
-     - Save $_POST['comment'] as the admin_comment
-     - Set $message / $messageType based on the actual result */
-  $message = "Results saved successfully! (Database integration coming later)";
-  $messageType = "success";
+if ($isEditMode && $currentRequest && isset($_POST['save_results'])) {
+
+    $studentId = (int)$currentRequest['student_id'];
+    $practicalScore = (int)$_POST['practical_score'];
+    $practicalClass = $_POST['practical_classification'];
+    $occupationalScore = (int)$_POST['occupational_score'];
+    $occupationalClass = $_POST['occupational_classification'];
+    $fundamentalScore = (int)$_POST['fundamental_score'];
+    $fundamentalClass = $_POST['fundamental_classification'];
+    $overallGrade = $_POST['grade'];
+    $comment = trim($_POST['comment'] ?? '');
+    $academicYear = date('Y');
+
+    // Check if this student already has a results row - update it, otherwise insert new
+    $checkStmt = mysqli_prepare($conn, "SELECT result_id FROM results WHERE student_id = ? LIMIT 1");
+    mysqli_stmt_bind_param($checkStmt, "i", $studentId);
+    mysqli_stmt_execute($checkStmt);
+    $existing = mysqli_fetch_assoc(mysqli_stmt_get_result($checkStmt));
+    mysqli_stmt_close($checkStmt);
+
+    if ($existing) {
+        $stmt = mysqli_prepare($conn, "
+            UPDATE results SET
+                practical_score = ?, practical_classification = ?,
+                occupational_score = ?, occupational_classification = ?,
+                fundamental_score = ?, fundamental_classification = ?,
+                overall_classification = ?, admin_comment = ?, academic_year = ?
+            WHERE result_id = ?
+        ");
+        $resultId = $existing['result_id'];
+        mysqli_stmt_bind_param($stmt, "isisissssi",
+            $practicalScore, $practicalClass,
+            $occupationalScore, $occupationalClass,
+            $fundamentalScore, $fundamentalClass,
+            $overallGrade, $comment, $academicYear, $resultId
+        );
+    } else {
+        $stmt = mysqli_prepare($conn, "
+            INSERT INTO results
+                (student_id, practical_score, practical_classification,
+                 occupational_score, occupational_classification,
+                 fundamental_score, fundamental_classification,
+                 overall_classification, admin_comment, academic_year)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        mysqli_stmt_bind_param($stmt, "iisisissss",
+            $studentId, $practicalScore, $practicalClass,
+            $occupationalScore, $occupationalClass,
+            $fundamentalScore, $fundamentalClass,
+            $overallGrade, $comment, $academicYear
+        );
+    }
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+
+    // Mark the request as approved now that results are entered
+    $updateReq = mysqli_prepare($conn, "UPDATE result_requests SET status = 'Approved' WHERE request_id = ?");
+    mysqli_stmt_bind_param($updateReq, "i", $requestId);
+    mysqli_stmt_execute($updateReq);
+    mysqli_stmt_close($updateReq);
+
+    $message = "Results saved successfully.";
+    $messageType = "success";
+    $currentRequest['status'] = 'Approved'; // reflect immediately on this page load
 }
 
-/* TODO (BACKEND): if editing, pre-fill the form below with this student's
-   EXISTING scores/classifications if they've been entered before (e.g. re-editing). */
+$requests = [];
+if (!$isEditMode) {
+    $result = mysqli_query($conn, "
+        SELECT r.request_id, u.fullname AS student, col.college_name, co.course_name, sem.semester_name, r.status
+        FROM result_requests r
+        JOIN students s ON r.student_id = s.student_id
+        JOIN users u ON s.user_id = u.id
+        JOIN colleges col ON s.college_id = col.college_id
+        JOIN courses co ON s.course_id = co.course_id
+        JOIN semesters sem ON s.semester_id = sem.semester_id
+        ORDER BY r.request_date DESC
+    ");
+    while ($row = mysqli_fetch_assoc($result)) {
+        $requests[] = [
+            "id"      => $row["request_id"],
+            "student" => $row["student"],
+            "college" => $row["college_name"],
+            "course"  => $row["course_name"],
+            "level"   => ucfirst($row["semester_name"]),
+            "status"  => $row["status"],
+        ];
+    }
+}
 
 $pageTitle  = $isEditMode ? "Edit Results" : "Result Requests";
 $activeMenu = "requests";
@@ -87,15 +156,15 @@ require 'includes/header.php';
         </div>
         <div class="info-box">
           <label>College</label>
-          <p><?php echo htmlspecialchars($currentRequest["college"]); ?></p>
+          <p><?php echo htmlspecialchars($currentRequest["college_name"]); ?></p>
         </div>
         <div class="info-box">
           <label>Course</label>
-          <p><?php echo htmlspecialchars($currentRequest["course"]); ?></p>
+          <p><?php echo htmlspecialchars($currentRequest["course_name"]); ?></p>
         </div>
         <div class="info-box">
           <label>Level</label>
-          <p><?php echo htmlspecialchars($currentRequest["level"]); ?></p>
+          <p><?php echo htmlspecialchars(ucfirst($currentRequest["semester_name"])); ?></p>
         </div>
       </div>
 
@@ -105,7 +174,7 @@ require 'includes/header.php';
         </div>
       <?php endif; ?>
 
-      <form method="POST" action="result_requests.php?action=edit&request_id=<?php echo (int)$currentRequest['id']; ?>" novalidate>
+      <form method="POST" action="result_requests.php?action=edit&request_id=<?php echo (int)$currentRequest['request_id']; ?>" novalidate>
 
         <div class="paper-grid">
 
@@ -226,14 +295,13 @@ require 'includes/header.php';
           <th>College</th>
           <th>Course</th>
           <th>Level</th>
-          <th>Year</th>
           <th>Status</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody>
         <?php if (empty($requests)): ?>
-          <tr><td colspan="8" class="no-results">No result requests yet.</td></tr>
+          <tr><td colspan="7" class="no-results">No result requests yet.</td></tr>
         <?php else: ?>
           <?php foreach ($requests as $req): ?>
             <tr>
@@ -242,7 +310,6 @@ require 'includes/header.php';
               <td class="col-college"><?php echo htmlspecialchars($req["college"]); ?></td>
               <td class="col-course"><?php echo htmlspecialchars($req["course"]); ?></td>
               <td><?php echo htmlspecialchars($req["level"]); ?></td>
-              <td><?php echo htmlspecialchars($req["year"]); ?></td>
               <td><span class="status <?php echo statusClass($req["status"]); ?>"><?php echo htmlspecialchars(ucfirst($req["status"])); ?></span></td>
               <td>
                 <a href="result_requests.php?action=edit&amp;request_id=<?php echo (int)$req['id']; ?>" class="view">
@@ -264,7 +331,6 @@ require 'includes/header.php';
 <?php
 if (!$isEditMode) {
   $pageScript = <<<'JS'
-  // Live client-side search filter across student, college and course.
   const searchInput = document.getElementById('searchInput');
   const tableRows = Array.from(document.querySelectorAll('#requestsTable tbody tr'));
   const noMatchMessage = document.getElementById('noMatchMessage');

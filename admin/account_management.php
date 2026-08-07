@@ -1,11 +1,26 @@
 <?php
-session_start();
+require_once '../config/auth.php';
+require_login();
+require_role('Admin');
 
-// Temporary admin data
-$adminName = "System Administrator";
-$username = "admin";
+$userId = $_SESSION['user_id'];
+
+$adminName = $_SESSION['fullname'];
+$username = $_SESSION['username'];
 $role = "Administrator";
-$created = "01 January 2026";
+$created = "";
+
+$stmt = mysqli_prepare($conn, "SELECT fullname, username, created_at FROM users WHERE id = ? LIMIT 1");
+mysqli_stmt_bind_param($stmt, "i", $userId);
+mysqli_stmt_execute($stmt);
+$userRow = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+mysqli_stmt_close($stmt);
+
+if ($userRow) {
+    $adminName = $userRow['fullname'];
+    $username = $userRow['username'];
+    $created = date("d F Y", strtotime($userRow['created_at']));
+}
 
 $profileMessage = "";
 $profileMessageType = "";
@@ -14,28 +29,74 @@ $passwordMessage = "";
 $passwordMessageType = "";
 
 if (isset($_POST['save'])) {
-  /* TODO (BACKEND):
-     - Validate $_POST['fullname'] and $_POST['username']
-     - Check the username isn't already taken by another admin
-     - Save changes to the database
-     - Set $profileMessage / $profileMessageType based on the actual result */
-  $profileMessage = "Account details updated successfully! (Database integration coming later)";
-  $profileMessageType = "success";
+    $newFullname = trim($_POST['fullname'] ?? '');
+    $newUsername = trim($_POST['username'] ?? '');
+
+    if ($newFullname === '' || $newUsername === '') {
+        $profileMessage = "Full name and username cannot be empty.";
+        $profileMessageType = "error";
+    } else {
+        // Make sure the username isn't already taken by someone else
+        $checkStmt = mysqli_prepare($conn, "SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1");
+        mysqli_stmt_bind_param($checkStmt, "si", $newUsername, $userId);
+        mysqli_stmt_execute($checkStmt);
+        mysqli_stmt_store_result($checkStmt);
+
+        if (mysqli_stmt_num_rows($checkStmt) > 0) {
+            $profileMessage = "That username is already taken.";
+            $profileMessageType = "error";
+        } else {
+            $updateStmt = mysqli_prepare($conn, "UPDATE users SET fullname = ?, username = ? WHERE id = ?");
+            mysqli_stmt_bind_param($updateStmt, "ssi", $newFullname, $newUsername, $userId);
+            mysqli_stmt_execute($updateStmt);
+            mysqli_stmt_close($updateStmt);
+
+            $_SESSION['fullname'] = $newFullname;
+            $_SESSION['username'] = $newUsername;
+            $adminName = $newFullname;
+            $username = $newUsername;
+
+            $profileMessage = "Account details updated successfully!";
+            $profileMessageType = "success";
+        }
+        mysqli_stmt_close($checkStmt);
+    }
 }
 
 if (isset($_POST['change_password'])) {
-  /* TODO (BACKEND):
-     - Verify $_POST['current_password'] against the DB hash
-     - Confirm $_POST['new_password'] === $_POST['confirm_password']
-     - Hash and save the new password
-     - Set $passwordMessage / $passwordMessageType based on the actual result,
-       e.g. on failure: $passwordMessage = "Current password is incorrect.";
-                        $passwordMessageType = "error"; */
-  $passwordMessage = "Password updated successfully! (Database integration coming later)";
-  $passwordMessageType = "success";
+    $current = $_POST['current_password'] ?? '';
+    $new = $_POST['new_password'] ?? '';
+    $confirm = $_POST['confirm_password'] ?? '';
+
+    if ($new !== $confirm) {
+        $passwordMessage = "New passwords do not match.";
+        $passwordMessageType = "error";
+    } elseif (strlen($new) < 8) {
+        $passwordMessage = "New password must be at least 8 characters.";
+        $passwordMessageType = "error";
+    } else {
+        $stmt = mysqli_prepare($conn, "SELECT password FROM users WHERE id = ? LIMIT 1");
+        mysqli_stmt_bind_param($stmt, "i", $userId);
+        mysqli_stmt_execute($stmt);
+        $user = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+        mysqli_stmt_close($stmt);
+
+        if (!$user || !password_verify($current, $user['password'])) {
+            $passwordMessage = "Current password is incorrect.";
+            $passwordMessageType = "error";
+        } else {
+            $hashed = password_hash($new, PASSWORD_DEFAULT);
+            $updateStmt = mysqli_prepare($conn, "UPDATE users SET password = ? WHERE id = ?");
+            mysqli_stmt_bind_param($updateStmt, "si", $hashed, $userId);
+            mysqli_stmt_execute($updateStmt);
+            mysqli_stmt_close($updateStmt);
+
+            $passwordMessage = "Password updated successfully!";
+            $passwordMessageType = "success";
+        }
+    }
 }
 
-// Small helper for the avatar - shows the admin's initials
 function initials($name) {
   $parts = preg_split('/\s+/', trim($name));
   $letters = array_map(fn($p) => strtoupper(substr($p, 0, 1)), array_slice($parts, 0, 2));
@@ -141,8 +202,6 @@ require 'includes/header.php';
 
 <?php
 $pageScript = <<<'JS'
-  // Client-side password match check only.
-  // Real validation must still happen in PHP, since front-end checks can be bypassed.
   const form = document.getElementById('passwordForm');
   const newPassword = document.getElementById('new_password');
   const confirmPassword = document.getElementById('confirm_password');

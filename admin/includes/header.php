@@ -41,7 +41,7 @@ function navClass($menuKey, $activeMenu) {
 <nav class="sidebar" id="sidebar" aria-label="Admin navigation">
 
   <div class="logo">
-   <img src="../images/teveta-logo.png" class="logo" alt="TEVETA Logo">
+    <img src="../images/teveta-logo.png" alt="TEVETA logo">
     <h2>Admin Panel</h2>
     <p>TEVETA Student Portal</p>
   </div>
@@ -50,6 +50,7 @@ function navClass($menuKey, $activeMenu) {
     <li><a href="dashboard.php" class="<?php echo navClass('dashboard', $activeMenu); ?>" <?php echo $activeMenu === 'dashboard' ? 'aria-current="page"' : ''; ?>><i class="fa fa-home"></i> Dashboard</a></li>
     <li><a href="students.php" class="<?php echo navClass('students', $activeMenu); ?>" <?php echo $activeMenu === 'students' ? 'aria-current="page"' : ''; ?>><i class="fa fa-users"></i> Students</a></li>
     <li><a href="result_requests.php" class="<?php echo navClass('requests', $activeMenu); ?>" <?php echo $activeMenu === 'requests' ? 'aria-current="page"' : ''; ?>><i class="fa fa-file-alt"></i> Result Requests</a></li>
+    <li><a href="password_reset_requests.php" class="<?php echo navClass('resets', $activeMenu); ?>" <?php echo $activeMenu === 'resets' ? 'aria-current="page"' : ''; ?>><i class="fa fa-unlock-keyhole"></i> Password Resets</a></li>
     <li><a href="account_management.php" class="<?php echo navClass('account', $activeMenu); ?>" <?php echo $activeMenu === 'account' ? 'aria-current="page"' : ''; ?>><i class="fa fa-user-cog"></i> Account Management</a></li>
     <li><a href="../logout.php"><i class="fa fa-sign-out-alt"></i> Logout</a></li>
   </ul>

@@ -48,7 +48,6 @@ function navClass($menuKey, $activeMenu) {
   <ul class="menu">
     <li><a href="dashboard.php" class="<?php echo navClass('dashboard', $activeMenu); ?>" <?php echo $activeMenu === 'dashboard' ? 'aria-current="page"' : ''; ?>><i class="fa fa-home"></i> Dashboard</a></li>
     <li><a href="request_results.php" class="<?php echo navClass('request', $activeMenu); ?>" <?php echo $activeMenu === 'request' ? 'aria-current="page"' : ''; ?>><i class="fa fa-file-alt"></i> Request Results</a></li>
-   
     <li><a href="view_results.php" class="<?php echo navClass('results', $activeMenu); ?>" <?php echo $activeMenu === 'results' ? 'aria-current="page"' : ''; ?>><i class="fa fa-chart-bar"></i> View Results</a></li>
     <li><a href="profile.php" class="<?php echo navClass('profile', $activeMenu); ?>" <?php echo $activeMenu === 'profile' ? 'aria-current="page"' : ''; ?>><i class="fa fa-user"></i> My Profile</a></li>
     <li><a href="change_password.php" class="<?php echo navClass('password', $activeMenu); ?>" <?php echo $activeMenu === 'password' ? 'aria-current="page"' : ''; ?>><i class="fa fa-lock"></i> Change Password</a></li>
@@ -59,8 +58,7 @@ function navClass($menuKey, $activeMenu) {
 
 <div class="overlay" id="overlay"></div>
 
-<!-- Main -->
-<div class="main">
+<!-- Main --><div class="main">
 
   <div class="header">
     <div class="header-left">

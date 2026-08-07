@@ -1,22 +1,57 @@
 <?php
-session_start();
+require_once '../config/auth.php';
+require_login();
+require_role('Student');
 
-// Temporary user data (replace with database later)
-$studentName = "Lonjezo Makhaula";
+$studentName = $_SESSION['fullname'];
+$studentId = $_SESSION['student_id'] ?? null;
 
-/* TODO (BACKEND): pull these stats from the database
-   e.g. SELECT COUNT(*) FROM result_requests WHERE student_id = ?; etc. */
 $stats = [
   "result_requests" => 0,
   "approved"         => 0,
   "pending"          => 0,
   "notifications"    => 0,
 ];
-
-/* TODO (BACKEND): replace with a real query
-   SELECT activity_date, activity, status FROM activity_log
-   WHERE student_id = ? ORDER BY activity_date DESC LIMIT 10; */
 $recentActivity = [];
+
+if ($studentId) {
+    $stmt = mysqli_prepare($conn, "SELECT COUNT(*) AS c FROM result_requests WHERE student_id = ?");
+    mysqli_stmt_bind_param($stmt, "i", $studentId);
+    mysqli_stmt_execute($stmt);
+    $stats["result_requests"] = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt))["c"];
+    mysqli_stmt_close($stmt);
+
+    $stmt = mysqli_prepare($conn, "SELECT COUNT(*) AS c FROM result_requests WHERE student_id = ? AND status = 'Approved'");
+    mysqli_stmt_bind_param($stmt, "i", $studentId);
+    mysqli_stmt_execute($stmt);
+    $stats["approved"] = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt))["c"];
+    mysqli_stmt_close($stmt);
+
+    $stmt = mysqli_prepare($conn, "SELECT COUNT(*) AS c FROM result_requests WHERE student_id = ? AND status = 'Pending'");
+    mysqli_stmt_bind_param($stmt, "i", $studentId);
+    mysqli_stmt_execute($stmt);
+    $stats["pending"] = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt))["c"];
+    mysqli_stmt_close($stmt);
+
+    $stmt = mysqli_prepare($conn, "SELECT COUNT(*) AS c FROM notifications WHERE student_id = ? AND is_read = 0");
+    mysqli_stmt_bind_param($stmt, "i", $studentId);
+    mysqli_stmt_execute($stmt);
+    $stats["notifications"] = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt))["c"];
+    mysqli_stmt_close($stmt);
+
+    $stmt = mysqli_prepare($conn, "SELECT request_date, status FROM result_requests WHERE student_id = ? ORDER BY request_date DESC LIMIT 5");
+    mysqli_stmt_bind_param($stmt, "i", $studentId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    while ($row = mysqli_fetch_assoc($result)) {
+        $recentActivity[] = [
+            "date"     => date("d M Y", strtotime($row["request_date"])),
+            "activity" => "Result Request",
+            "status"   => $row["status"],
+        ];
+    }
+    mysqli_stmt_close($stmt);
+}
 
 $pageTitle  = "Dashboard";
 $activeMenu = "dashboard";
@@ -68,9 +103,9 @@ require 'includes/header.php';
         <h3>Request Results</h3>
       </a>
 
-      <a href="view_requests.php" class="action">
+      <a href="view_results.php" class="action">
         <i class="fa fa-list-check"></i>
-        <h3>My Requests</h3>
+        <h3>View Results</h3>
       </a>
 
       <a href="profile.php" class="action">

@@ -1,15 +1,39 @@
 <?php
-session_start();
+require_once '../config/auth.php';
+require_login();
+require_role('Student');
 
-// Temporary student data
-$studentName = "Lonjezo Makhaula";
-$username = "lonjezo";
-$college = "Salima Technical College";
-$course = "ICT";
-$level = "Level 2";
+$studentId = $_SESSION['student_id'] ?? null;
 
-// TODO (BACKEND): pull account status from DB (e.g. "Active" / "Suspended")
+$studentName = $_SESSION['fullname'];
+$username = $_SESSION['username'];
+$college = "Not set";
+$course = "Not set";
+$level = "Not set";
 $accountStatus = "Active";
+
+if ($studentId) {
+    $stmt = mysqli_prepare($conn, "
+        SELECT col.college_name, co.course_name, sem.semester_name, u.status
+        FROM students s
+        JOIN colleges col ON s.college_id = col.college_id
+        JOIN courses co ON s.course_id = co.course_id
+        JOIN semesters sem ON s.semester_id = sem.semester_id
+        JOIN users u ON s.user_id = u.id
+        WHERE s.student_id = ?
+    ");
+    mysqli_stmt_bind_param($stmt, "i", $studentId);
+    mysqli_stmt_execute($stmt);
+    $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+
+    if ($row) {
+        $college = $row['college_name'];
+        $course = $row['course_name'];
+        $level = ucfirst($row['semester_name']);
+        $accountStatus = $row['status'];
+    }
+}
 
 function initials($name) {
   $parts = preg_split('/\s+/', trim($name));
@@ -69,7 +93,6 @@ require 'includes/header.php';
       </div>
 
       <div class="buttons">
-        <!-- TODO (BACKEND): point this to your actual edit-profile page/handler -->
         <a href="edit_profile.php" class="btn edit">
           <i class="fa fa-pen"></i>
           Edit Profile

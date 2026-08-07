@@ -1,20 +1,46 @@
 <?php
-session_start();
+require_once '../config/auth.php';
+require_login();
+require_role('Student');
 
-// Temporary user
-$studentName = "Lonjezo Makhaula";
+$studentName = $_SESSION['fullname'];
+$userId = $_SESSION['user_id'];
 
 $message = "";
 $messageType = "";
 
-if(isset($_POST['change_password'])){
-    /* TODO (BACKEND):
-       - Verify $_POST['current_password'] against the DB hash
-       - Confirm $_POST['new_password'] === $_POST['confirm_password']
-       - Hash and save the new password
-       - Set $message / $messageType based on the actual result */
-    $message = "Password updated successfully! (Database connection coming later)";
-    $messageType = "success";
+if (isset($_POST['change_password'])) {
+    $current = $_POST['current_password'] ?? '';
+    $new = $_POST['new_password'] ?? '';
+    $confirm = $_POST['confirm_password'] ?? '';
+
+    if ($new !== $confirm) {
+        $message = "New passwords do not match.";
+        $messageType = "error";
+    } elseif (strlen($new) < 8) {
+        $message = "New password must be at least 8 characters.";
+        $messageType = "error";
+    } else {
+        $stmt = mysqli_prepare($conn, "SELECT password FROM users WHERE id = ? LIMIT 1");
+        mysqli_stmt_bind_param($stmt, "i", $userId);
+        mysqli_stmt_execute($stmt);
+        $user = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+        mysqli_stmt_close($stmt);
+
+        if (!$user || !password_verify($current, $user['password'])) {
+            $message = "Current password is incorrect.";
+            $messageType = "error";
+        } else {
+            $hashed = password_hash($new, PASSWORD_DEFAULT);
+            $updateStmt = mysqli_prepare($conn, "UPDATE users SET password = ? WHERE id = ?");
+            mysqli_stmt_bind_param($updateStmt, "si", $hashed, $userId);
+            mysqli_stmt_execute($updateStmt);
+            mysqli_stmt_close($updateStmt);
+
+            $message = "Password updated successfully!";
+            $messageType = "success";
+        }
+    }
 }
 
 $pageTitle  = "Change Password";

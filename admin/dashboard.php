@@ -1,26 +1,44 @@
 <?php
-session_start();
+require_once '../config/auth.php';
+require_login();
+require_role('Admin');
 
-// Temporary admin data
-$adminName = "System Administrator";
+$adminName = $_SESSION['fullname'];
 
-/* TODO (BACKEND): pull these stats from the database
-   e.g. SELECT COUNT(*) FROM students; SELECT COUNT(*) FROM result_requests WHERE status='pending'; etc. */
 $stats = [
-  "total_students"   => 250,
-  "result_requests"  => 65,
-  "pending_requests" => 18,
-  "results_uploaded" => 47,
+  "total_students"   => 0,
+  "result_requests"  => 0,
+  "pending_requests" => 0,
+  "results_uploaded" => 0,
 ];
 
-/* TODO (BACKEND): replace with a real query, most recent first, limited to e.g. 5-10 rows
-   SELECT s.name, s.college, s.course, s.level, r.status, r.id
-   FROM result_requests r JOIN students s ON r.student_id = s.id
-   ORDER BY r.created_at DESC LIMIT 10; */
-$recentRequests = [
-  ["student" => "Lonjezo Makhaula", "college" => "Salima Technical College", "course" => "ICT",                     "level" => "Level 2", "status" => "pending",  "id" => 101],
-  ["student" => "John Banda",       "college" => "Mzuzu Technical College",  "course" => "Electrical Installation",  "level" => "Level 3", "status" => "approved", "id" => 102],
-];
+$stats["total_students"] = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM students"))["c"];
+$stats["result_requests"] = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM result_requests"))["c"];
+$stats["pending_requests"] = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM result_requests WHERE status = 'Pending'"))["c"];
+$stats["results_uploaded"] = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM results"))["c"];
+
+$recentRequests = [];
+$result = mysqli_query($conn, "
+    SELECT r.request_id, u.fullname AS student, col.college_name, co.course_name, sem.semester_name, r.status
+    FROM result_requests r
+    JOIN students s ON r.student_id = s.student_id
+    JOIN users u ON s.user_id = u.id
+    JOIN colleges col ON s.college_id = col.college_id
+    JOIN courses co ON s.course_id = co.course_id
+    JOIN semesters sem ON s.semester_id = sem.semester_id
+    ORDER BY r.request_date DESC
+    LIMIT 5
+");
+while ($row = mysqli_fetch_assoc($result)) {
+    $recentRequests[] = [
+        "id"      => $row["request_id"],
+        "student" => $row["student"],
+        "college" => $row["college_name"],
+        "course"  => $row["course_name"],
+        "level"   => ucfirst($row["semester_name"]),
+        "status"  => strtolower($row["status"]),
+    ];
+}
 
 function statusClass($status) {
   return strtolower($status) === "approved" ? "status-approved" : "status-pending";

@@ -1,36 +1,44 @@
 <?php
-session_start();
+require_once '../config/auth.php';
+require_login();
+require_role('Student');
 
-// Temporary student name
-$studentName = "Lonjezo Makhaula";
-
-/* ============================================================
-   TODO (BACKEND - your friend):
-   Replace $resultsData and $overall below with a real database query.
-   See the SQL shape suggested in earlier drafts of this page -
-   one query for per-paper scores/classifications, one for the
-   overall classification + admin comment.
-   ============================================================ */
+$studentName = $_SESSION['fullname'];
+$studentId = $_SESSION['student_id'] ?? null;
 
 $resultsData = [
-  "practical"    => ["score" => 88, "classification" => "Distinction"],
-  "occupational" => ["score" => 65, "classification" => "Pass"],
-  "fundamental"  => ["score" => 70, "classification" => "Credit"],
+  "practical"    => ["score" => null, "classification" => "Pending"],
+  "occupational" => ["score" => null, "classification" => "Pending"],
+  "fundamental"  => ["score" => null, "classification" => "Pending"],
 ];
+$overall = ["classification" => "Pending", "comment" => ""];
 
-$overall = [
-  "classification" => "Credit",
-  "comment"         => "Good overall performance. Improve fundamental paper score next attempt.",
-];
+if ($studentId) {
+    $stmt = mysqli_prepare($conn, "SELECT * FROM results WHERE student_id = ? ORDER BY updated_at DESC LIMIT 1");
+    mysqli_stmt_bind_param($stmt, "i", $studentId);
+    mysqli_stmt_execute($stmt);
+    $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+
+    if ($row) {
+        $resultsData["practical"]    = ["score" => $row["practical_score"],    "classification" => $row["practical_classification"] ?? "Pending"];
+        $resultsData["occupational"] = ["score" => $row["occupational_score"], "classification" => $row["occupational_classification"] ?? "Pending"];
+        $resultsData["fundamental"]  = ["score" => $row["fundamental_score"],  "classification" => $row["fundamental_classification"] ?? "Pending"];
+        $overall = [
+            "classification" => $row["overall_classification"] ?? "Pending",
+            "comment"        => $row["admin_comment"] ?? "",
+        ];
+    }
+}
 
 function classBadge($classification) {
-  switch (strtolower($classification)) {
-    case "distinction": return "badge-distinction";
-    case "credit":       return "badge-credit";
-    case "pass":         return "badge-pass";
-    case "fail":         return "badge-fail";
-    default:             return "badge-pending";
-  }
+    switch (strtolower($classification)) {
+        case "distinction": return "badge-distinction";
+        case "credit":       return "badge-credit";
+        case "pass":         return "badge-pass";
+        case "fail":         return "badge-fail";
+        default:             return "badge-pending";
+    }
 }
 
 $pageTitle  = "My Examination Results";
